@@ -2,9 +2,9 @@ package datastore
 
 import (
 	"encoding/json"
-	"io"
 	"fmt"
 	"gopkg.in/redis.v2"
+	"io"
 )
 
 // Doctype representation
@@ -14,20 +14,20 @@ type Doctype struct {
 	// ID used on the internals.
 	// Because of it we can change the Code and VerboseName whenever
 	// wanted.
-	Id	string		`json:"id"`
+	Id string `json:"id"`
 
 	// It represents the name of the field on the JSON and the public API.
 	// We can't have two doctypes with the same code.
-	Code	string	`json:"code"`
+	Code string `json:"code"`
 
 	// The human title for the doctype.
-	VerboseName	string	`json:"verbose_name"`
+	VerboseName string `json:"verbose_name"`
 
 	// Fields' definition.
-	Fields	map[string]*Field	`json:"fields"`
+	Fields map[string]*Field `json:"fields"`
 
 	// Last revision of the doctype.
-	Revision	*Revision `json:"revision"`
+	Revision *Revision `json:"revision"`
 }
 
 // Implmements json.Decoder
@@ -49,7 +49,7 @@ func (d *Doctype) Save(client *redis.Pipeline) {
 	// add this revision to a sorted set so we can retrieve all
 	// the revisions on a chronological order.
 	client.ZAdd(joinKey([]string{d.Id, "revisions"}), redis.Z{
-		Score: float64(d.Revision.When.Unix()),
+		Score:  float64(d.Revision.When.Unix()),
 		Member: d.Revision.Id,
 	})
 

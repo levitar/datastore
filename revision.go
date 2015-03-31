@@ -1,9 +1,9 @@
 package datastore
 
 import (
-	"time"
 	"fmt"
 	"gopkg.in/redis.v2"
+	"time"
 )
 
 // Revision meta data
@@ -11,22 +11,22 @@ import (
 // Contains basic information for the revision
 type Revision struct {
 	// Revision's identification
-	Id	string		`json:"id"`
+	Id string `json:"id"`
 
 	// Message summarizing the revision.
-	Message string	`json:"message,omitempty"`
+	Message string `json:"message,omitempty"`
 
 	// Time and data of the modification
-	When	time.Time	`json:"when"`
+	When time.Time `json:"when"`
 
 	// Kind of changed
-	Type	string	`json:"type"`
+	Type string `json:"type"`
 
 	// Parent revision
-	Parent	string 	`json:"parent"`
+	Parent string `json:"parent"`
 
 	// Object's ID on the database
-	Object	string	`json:"-"`
+	Object string `json:"-"`
 }
 
 // Save revision to the database.

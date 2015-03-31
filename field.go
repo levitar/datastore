@@ -1,8 +1,8 @@
 package datastore
 
 import (
-	"strconv"
 	"gopkg.in/redis.v2"
+	"strconv"
 )
 
 // Field represents of a field of a Doctype
@@ -10,26 +10,26 @@ type Field struct {
 	// ID used on the internals of the database.
 	// Because of it we can change the Code and VerboseName whenever
 	// wanted.
-	Id	string	`json:"id"`
+	Id string `json:"id"`
 
 	// It represents the name of the field on the JSON and the public API.
 	// No Doctype can have two fields with the same code.
-	Code	string	`json:"code"`
+	Code string `json:"code"`
 
 	// The human title for the field.
-	VerboseName	string	`json:"verbose_name"`
+	VerboseName string `json:"verbose_name"`
 
 	// Types of values expected on the field.
 	// It accepts multiple types so we can have multiple doctypes
 	// referenced on the values.
-	ExpectedTypes	[]string	`json:"expected_types"` // needs to be a list of types
+	ExpectedTypes []string `json:"expected_types"` // needs to be a list of types
 
 	// Flag to set the field to store multiple values instead of just one.
 	// Usefull for things like tags or categories.
-	MultipleValues	bool	`json:"multiple_values"`
+	MultipleValues bool `json:"multiple_values"`
 
 	// Last revision of the field.
-	Revision	*Revision	`json:"revision"`
+	Revision *Revision `json:"revision"`
 }
 
 // Saves the field definition to the database.
@@ -46,7 +46,7 @@ func (f *Field) Save(doctype *Doctype, client *redis.Pipeline) {
 	// add this revision to a sorted set so we can retrieve all
 	// the revisions on a chronological order.
 	client.ZAdd(joinKey([]string{base_key, "revisions"}), redis.Z{
-		Score: float64(f.Revision.When.Unix()),
+		Score:  float64(f.Revision.When.Unix()),
 		Member: f.Revision.Id,
 	})
 
