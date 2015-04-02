@@ -16,7 +16,7 @@ func init() {
 	random = f
 }
 
-// Generate IDs used on the database
+// GenerateID generate an ID to be used on the database
 func GenerateID(size int) string {
 	b := make([]byte, size)
 	random.Read(b)

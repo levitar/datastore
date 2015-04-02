@@ -11,7 +11,7 @@ import (
 // Contains basic information for the revision
 type Revision struct {
 	// Revision's identification
-	Id string `json:"id"`
+	ID string `json:"id"`
 
 	// Message summarizing the revision.
 	Message string `json:"message,omitempty"`
@@ -31,24 +31,29 @@ type Revision struct {
 
 // Save revision to the database.
 func (r *Revision) Save(client *redis.Pipeline) {
-	client.HSet(r.Id, "type", "revision")
-	client.HSet(r.Id, "object", r.Object)
-	client.HSet(r.Id, "when", r.When.Format(time.RFC3339Nano))
-	client.HSet(r.Id, "change_type", r.Type)
+	client.ZAdd("revisions", redis.Z{
+		Score:  float64(r.When.Unix()),
+		Member: r.ID,
+	})
+
+	client.HSet(r.ID, "type", "revision")
+	client.HSet(r.ID, "object", r.Object)
+	client.HSet(r.ID, "when", r.When.Format(time.RFC3339Nano))
+	client.HSet(r.ID, "change_type", r.Type)
 }
 
-// Create a revision meta to the object
-func CreateRevision(object_id string) *Revision {
+// CreateRevision creates a revision meta to the object
+func CreateRevision(objectID string) *Revision {
 	revision := Revision{}
-	revision.Id = GenerateID(6)
+	revision.ID = GenerateID(6)
 	revision.When = time.Now().UTC()
 	revision.Type = "create"
-	revision.Object = object_id
+	revision.Object = objectID
 
 	return &revision
 }
 
-// Load a revision meta data from the database by ID.
+// LoadRevisionByID loads a revision meta data from the database by ID.
 func LoadRevisionByID(id string, client *redis.Client) (*Revision, error) {
 	var err error
 
@@ -61,7 +66,7 @@ func LoadRevisionByID(id string, client *redis.Client) (*Revision, error) {
 		return r, fmt.Errorf("%s is type '%s', expecting 'revision'", id, get["type"])
 	}
 
-	r.Id = id
+	r.ID = id
 	r.Type = get["change_type"]
 	r.Object = get["object"]
 	r.Message = get["message"]

@@ -10,7 +10,7 @@ type Field struct {
 	// ID used on the internals of the database.
 	// Because of it we can change the Code and VerboseName whenever
 	// wanted.
-	Id string `json:"id"`
+	ID string `json:"id"`
 
 	// It represents the name of the field on the JSON and the public API.
 	// No Doctype can have two fields with the same code.
@@ -32,62 +32,62 @@ type Field struct {
 	Revision *Revision `json:"revision"`
 }
 
-// Saves the field definition to the database.
+// Save the field definition to the database.
 func (f *Field) Save(doctype *Doctype, client *redis.Pipeline) {
 	// Generates an ID if there's no one set
-	if len(f.Id) == 0 {
-		f.Id = GenerateID(2)
+	if len(f.ID) == 0 {
+		f.ID = GenerateID(2)
 	}
 
 	// base key used on the database, it should prepend anything
 	// from this field on the database.
-	base_key := joinKey([]string{doctype.Id, "field", f.Id})
+	baseKey := joinKey([]string{doctype.ID, "field", f.ID})
 
 	// add this revision to a sorted set so we can retrieve all
 	// the revisions on a chronological order.
-	client.ZAdd(joinKey([]string{base_key, "revisions"}), redis.Z{
+	client.ZAdd(joinKey([]string{baseKey, "revisions"}), redis.Z{
 		Score:  float64(f.Revision.When.Unix()),
-		Member: f.Revision.Id,
+		Member: f.Revision.ID,
 	})
 
 	// set the current revision the the field's base
 	// hash.
-	client.HSet(base_key, "revision", f.Revision.Id)
+	client.HSet(baseKey, "revision", f.Revision.ID)
 
 	// Inside this loop there's everything that should be
 	// written to the history of changes (or Revision).
-	// That's why I loop over the Doctype.Id and Revision.Id
-	for _, base_id := range []string{doctype.Id, f.Revision.Id} {
-		// change base key to use the Revision.Id when necessary.
-		base_key = joinKey([]string{base_id, "field", f.Id})
+	// That's why I loop over the Doctype.ID and Revision.ID
+	for _, baseID := range []string{doctype.ID, f.Revision.ID} {
+		// change base key to use the Revision.ID when necessary.
+		baseKey = joinKey([]string{baseID, "field", f.ID})
 
 		// Add fields to doctype's (and revision's) fields set
 		// it's necessary so the doctype (and revision) can retrieve
 		// all the fields in it's definition.
-		client.SAdd(joinKey([]string{base_id, "fields"}), f.Id)
+		client.SAdd(joinKey([]string{baseID, "fields"}), f.ID)
 
-		client.HSet(base_key, "verbose_name", f.VerboseName)
-		client.HSet(base_key, "code", f.Code)
-		client.HSet(base_key, "multiple_values", strconv.FormatBool(f.MultipleValues))
+		client.HSet(baseKey, "verbose_name", f.VerboseName)
+		client.HSet(baseKey, "code", f.Code)
+		client.HSet(baseKey, "multiple_values", strconv.FormatBool(f.MultipleValues))
 
-		for _, expected_type := range f.ExpectedTypes {
-			client.SAdd(joinKey([]string{base_key, "expected_types"}), expected_type)
+		for _, expectedType := range f.ExpectedTypes {
+			client.SAdd(joinKey([]string{baseKey, "expected_types"}), expectedType)
 		}
 	}
 }
 
-// Load a doctype's field's definition from the database by ID
+// LoadFieldByID loads a doctype's field's definition from the database by ID
 func LoadFieldByID(d *Doctype, id string, client *redis.Client) {
 	var err error
 
 	f := &Field{}
-	f.Id = id
+	f.ID = id
 
 	// make base field's key
-	base_key := joinKey([]string{d.Id, "field", f.Id})
+	baseKey := joinKey([]string{d.ID, "field", f.ID})
 
 	// get all basic information from base hash
-	get := client.HGetAllMap(base_key).Val()
+	get := client.HGetAllMap(baseKey).Val()
 
 	f.Code = get["code"]
 	f.VerboseName = get["verbose_name"]
@@ -102,7 +102,7 @@ func LoadFieldByID(d *Doctype, id string, client *redis.Client) {
 		panic(err)
 	}
 
-	f.ExpectedTypes = client.SMembers(joinKey([]string{base_key, "expected_types"})).Val()
+	f.ExpectedTypes = client.SMembers(joinKey([]string{baseKey, "expected_types"})).Val()
 
 	// add field to doctype's instance fields definitions
 	d.Fields[f.Code] = f

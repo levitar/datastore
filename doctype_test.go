@@ -16,7 +16,7 @@ func TestDoctype(t *testing.T) {
 	pipeline := client.Pipeline()
 
 	Convey("Create a test doctype", t, func() {
-		create_doctype_json := strings.NewReader(`{
+		createDoctypeJSON := strings.NewReader(`{
 			"code": "page",
 			"verbose_name": "Pagina",
 			"fields": {
@@ -36,36 +36,36 @@ func TestDoctype(t *testing.T) {
 			}
 		}`)
 
-		doctype_created := Doctype{}
-		err := doctype_created.Decode(create_doctype_json)
+		doctypeCreated := Doctype{}
+		err := doctypeCreated.Decode(createDoctypeJSON)
 		if err != nil {
 			panic(err)
 		}
 
-		doctype_created.Save(pipeline)
+		doctypeCreated.Save(pipeline)
 		_, err = pipeline.Exec()
 		if err != nil {
 			panic(err)
 		}
 
 		Convey("Load doctype from database", func() {
-			doctype_loaded, doc_err := LoadDoctypeByID(doctype_created.Id, client)
-			if doc_err != nil {
-				panic(doc_err)
+			doctypeLoaded, docErr := LoadDoctypeByID(doctypeCreated.ID, client)
+			if docErr != nil {
+				panic(docErr)
 			}
 
 			Convey("Compare doctype created with loaded", func() {
-				dt_created_json, dt_created_json_err := json.MarshalIndent(doctype_created, "", "\t")
-				if dt_created_json_err != nil {
-					panic(dt_created_json_err)
+				dtCreatedJSON, dtCreatedJSONErr := json.MarshalIndent(doctypeCreated, "", "\t")
+				if dtCreatedJSONErr != nil {
+					panic(dtCreatedJSONErr)
 				}
 
-				dt_loaded_json, dt_loaded_json_err := json.MarshalIndent(doctype_loaded, "", "\t")
-				if dt_loaded_json_err != nil {
-					panic(dt_loaded_json_err)
+				dtLoadedJSON, dtLoadedJSONErr := json.MarshalIndent(doctypeLoaded, "", "\t")
+				if dtLoadedJSONErr != nil {
+					panic(dtLoadedJSONErr)
 				}
 
-				So(dt_created_json, ShouldResemble, dt_loaded_json)
+				So(dtCreatedJSON, ShouldResemble, dtLoadedJSON)
 			})
 		})
 	})
