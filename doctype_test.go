@@ -48,6 +48,8 @@ func TestDoctype(t *testing.T) {
 			panic(err)
 		}
 
+		pipeline.Close()
+
 		Convey("Load doctype from database", func() {
 			doctypeLoaded, docErr := LoadDoctypeByID(doctypeCreated.ID, client)
 			if docErr != nil {

@@ -39,7 +39,7 @@ func (d *Doctype) Decode(r io.Reader) error {
 func (d *Doctype) Save(client *redis.Pipeline) {
 	// Generates an ID if there's no one set
 	if len(d.ID) == 0 {
-		d.ID = GenerateID(6)
+		d.ID = GenerateID(4)
 	}
 
 	// create, set and Save a new Revision.
@@ -111,4 +111,13 @@ func LoadDoctypeByID(id string, client *redis.Client) (*Doctype, error) {
 	}
 
 	return d, nil
+}
+
+// LoadDoctypeByCode loads a doctype's definition from the database by code
+func LoadDoctypeByCode(code string, client *redis.Client) (*Doctype, error) {
+	doctypeID := client.HGet("doctypes", code).Val()
+	if len(doctypeID) == 0 {
+		return &Doctype{}, fmt.Errorf("Could not find Doctype by code '%s'", code)
+	}
+	return LoadDoctypeByID(doctypeID, client)
 }

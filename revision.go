@@ -45,7 +45,7 @@ func (r *Revision) Save(client *redis.Pipeline) {
 // CreateRevision creates a revision meta to the object
 func CreateRevision(objectID string) *Revision {
 	revision := Revision{}
-	revision.ID = GenerateID(6)
+	revision.ID = GenerateID(9)
 	revision.When = time.Now().UTC()
 	revision.Type = "create"
 	revision.Object = objectID
