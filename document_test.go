@@ -3,18 +3,11 @@ package datastore
 import (
 	"encoding/json"
 	. "github.com/smartystreets/goconvey/convey"
-	"gopkg.in/redis.v2"
 	"strings"
 	"testing"
 )
 
 func TestDocument(t *testing.T) {
-	client := redis.NewClient(&redis.Options{
-		Network: "tcp",
-		Addr:    "127.0.0.1:6379",
-	})
-	pipeline := client.Pipeline()
-
 	Convey("Create a doctype", t, func() {
 		createDoctypeJSON := strings.NewReader(`{
 			"code": "page",
@@ -37,13 +30,7 @@ func TestDocument(t *testing.T) {
 			panic(err)
 		}
 
-		doctypeCreated.Save(pipeline)
-		_, err = pipeline.Exec()
-		if err != nil {
-			panic(err)
-		}
-
-		pipeline.Close()
+		doctypeCreated.Save()
 
 		Convey("Save a document", func() {
 			createDocumentJSON := strings.NewReader(`{
@@ -61,10 +48,10 @@ func TestDocument(t *testing.T) {
 				panic(err)
 			}
 
-			documentCreated.Save(client)
+			documentCreated.Save()
 
 			Convey("Load document from database", func() {
-				documentLoaded, documentLoadedErr := LoadDocumentByID(documentCreated.ID, client)
+				documentLoaded, documentLoadedErr := LoadDocumentByID(documentCreated.ID)
 				if documentLoadedErr != nil {
 					panic(documentLoadedErr)
 				}
@@ -85,6 +72,4 @@ func TestDocument(t *testing.T) {
 			})
 		})
 	})
-
-	client.Close()
 }

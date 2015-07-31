@@ -2,9 +2,11 @@ package datastore
 
 import (
 	"fmt"
-	"gopkg.in/redis.v2"
+	"gopkg.in/redis.v3"
 	"time"
 )
+
+// It should be clear if the change is a Add, Remove or Change (patch)
 
 // Revision meta data
 //
@@ -54,13 +56,13 @@ func CreateRevision(objectID string) *Revision {
 }
 
 // LoadRevisionByID loads a revision meta data from the database by ID.
-func LoadRevisionByID(id string, client *redis.Client) (*Revision, error) {
+func LoadRevisionByID(id string) (*Revision, error) {
 	var err error
 
 	r := &Revision{}
 
 	// get all basic information from base hash
-	get := client.HGetAllMap(id).Val()
+	get := Conn.HGetAllMap(id).Val()
 
 	if get["type"] != "revision" {
 		return r, fmt.Errorf("%s is type '%s', expecting 'revision'", id, get["type"])

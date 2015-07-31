@@ -1,7 +1,7 @@
 package datastore
 
 import (
-	"gopkg.in/redis.v2"
+	"gopkg.in/redis.v3"
 	"strconv"
 )
 
@@ -33,7 +33,7 @@ type Field struct {
 }
 
 // Save the field definition to the database.
-func (f *Field) Save(doctype *Doctype, client *redis.Pipeline) {
+func (f *Field) Save(doctype *Doctype, pipeline *redis.Pipeline) {
 	// Generates an ID if there's no one set
 	if len(f.ID) == 0 {
 		f.ID = GenerateID(2)
@@ -45,14 +45,14 @@ func (f *Field) Save(doctype *Doctype, client *redis.Pipeline) {
 
 	// add this revision to a sorted set so we can retrieve all
 	// the revisions on a chronological order.
-	client.ZAdd(joinKey([]string{baseKey, "revisions"}), redis.Z{
+	pipeline.ZAdd(joinKey([]string{baseKey, "revisions"}), redis.Z{
 		Score:  float64(f.Revision.When.Unix()),
 		Member: f.Revision.ID,
 	})
 
 	// set the current revision the the field's base
 	// hash.
-	client.HSet(baseKey, "revision", f.Revision.ID)
+	pipeline.HSet(baseKey, "revision", f.Revision.ID)
 
 	// Inside this loop there's everything that should be
 	// written to the history of changes (or Revision).
@@ -64,20 +64,20 @@ func (f *Field) Save(doctype *Doctype, client *redis.Pipeline) {
 		// Add fields to doctype's (and revision's) fields set
 		// it's necessary so the doctype (and revision) can retrieve
 		// all the fields in it's definition.
-		client.SAdd(joinKey([]string{baseID, "fields"}), f.ID)
+		pipeline.SAdd(joinKey([]string{baseID, "fields"}), f.ID)
 
-		client.HSet(baseKey, "verbose_name", f.VerboseName)
-		client.HSet(baseKey, "code", f.Code)
-		client.HSet(baseKey, "multiple_values", strconv.FormatBool(f.MultipleValues))
+		pipeline.HSet(baseKey, "verbose_name", f.VerboseName)
+		pipeline.HSet(baseKey, "code", f.Code)
+		pipeline.HSet(baseKey, "multiple_values", strconv.FormatBool(f.MultipleValues))
 
 		for _, expectedType := range f.ExpectedTypes {
-			client.SAdd(joinKey([]string{baseKey, "expected_types"}), expectedType)
+			pipeline.SAdd(joinKey([]string{baseKey, "expected_types"}), expectedType)
 		}
 	}
 }
 
 // LoadFieldByID loads a doctype's field's definition from the database by ID
-func LoadFieldByID(d *Doctype, id string, client *redis.Client) {
+func LoadFieldByID(d *Doctype, id string) {
 	var err error
 
 	f := &Field{}
@@ -87,7 +87,7 @@ func LoadFieldByID(d *Doctype, id string, client *redis.Client) {
 	baseKey := joinKey([]string{d.ID, "field", f.ID})
 
 	// get all basic information from base hash
-	get := client.HGetAllMap(baseKey).Val()
+	get := Conn.HGetAllMap(baseKey).Val()
 
 	f.Code = get["code"]
 	f.VerboseName = get["verbose_name"]
@@ -97,12 +97,12 @@ func LoadFieldByID(d *Doctype, id string, client *redis.Client) {
 		panic(err)
 	}
 
-	f.Revision, err = LoadRevisionByID(get["revision"], client)
+	f.Revision, err = LoadRevisionByID(get["revision"])
 	if err != nil {
 		panic(err)
 	}
 
-	f.ExpectedTypes = client.SMembers(joinKey([]string{baseKey, "expected_types"})).Val()
+	f.ExpectedTypes = Conn.SMembers(joinKey([]string{baseKey, "expected_types"})).Val()
 
 	// add field to doctype's instance fields definitions
 	d.Fields[f.Code] = f

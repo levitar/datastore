@@ -3,9 +3,14 @@ package datastore
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/redis.v2"
+	"gopkg.in/redis.v3"
 	"io"
 )
+
+type Documenter interface {
+	Slug() string
+	DoctypeCode() string
+}
 
 // Document definition
 //
@@ -35,9 +40,9 @@ func (d *Document) Decode(r io.Reader) error {
 }
 
 // Save the doctype definition to the database.
-func (d *Document) Save(client *redis.Client) {
+func (d *Document) Save() {
 	var err error
-	pipeline := client.Pipeline()
+	pipeline := Conn.Pipeline()
 
 	// Generates an ID if there's no one set
 	if len(d.ID) == 0 {
@@ -46,7 +51,7 @@ func (d *Document) Save(client *redis.Client) {
 
 	// load doctype so we can build and validate the document
 	if d.Doctype == nil {
-		d.Doctype, err = LoadDoctypeByCode(d.DoctypeCode, client)
+		d.Doctype, err = LoadDoctypeByCode(d.DoctypeCode)
 		if err != nil {
 			panic(err)
 		}
@@ -71,7 +76,7 @@ func (d *Document) Save(client *redis.Client) {
 	// and to make slugs unique
 	pipeline.HSet("documents", d.Slug, d.ID)
 
-	client.HSet(d.ID, "type", "document")
+	Conn.HSet(d.ID, "type", "document")
 
 	// Inside this loop there's everything that should be
 	// written to the history of changes (or Revision).
@@ -95,7 +100,7 @@ func (d *Document) Save(client *redis.Client) {
 }
 
 // StoreValue of the field to the database.
-func (d *Document) StoreValue(f *Field, client *redis.Pipeline) {
+func (d *Document) StoreValue(f *Field, pipeline *redis.Pipeline) {
 	value := d.Fields[f.Code]
 
 	// Inside this loop there's everything that should be
@@ -111,16 +116,16 @@ func (d *Document) StoreValue(f *Field, client *redis.Pipeline) {
 			fieldType := f.ExpectedTypes[0]
 
 			if fieldType == "string" {
-				client.HSet(baseKeyHSet, f.ID, value.(string))
+				pipeline.HSet(baseKeyHSet, f.ID, value.(string))
 			}
 		}
 	}
 }
 
 // LoadValue of the field to the database.
-func (d *Document) LoadValue(f *Field, client *redis.Client) {
+func (d *Document) LoadValue(f *Field) {
 	// get all basic information from base hash
-	baseHSet := client.HGetAllMap(joinKey([]string{d.ID, "values"})).Val()
+	baseHSet := Conn.HGetAllMap(joinKey([]string{d.ID, "values"})).Val()
 	//baseKey := joinKey([]string{baseID, "value", f.ID})
 
 	// load from redis based on field's type
@@ -134,14 +139,14 @@ func (d *Document) LoadValue(f *Field, client *redis.Client) {
 }
 
 // LoadDocumentByID loads a document from the database by ID
-func LoadDocumentByID(id string, client *redis.Client) (*Document, error) {
+func LoadDocumentByID(id string) (*Document, error) {
 	var err error
 
 	d := &Document{}
 	d.ID = id
 
 	// get all basic information from base hash
-	get := client.HGetAllMap(id).Val()
+	get := Conn.HGetAllMap(id).Val()
 
 	if get["type"] != "document" {
 		return d, fmt.Errorf("%s is type '%s', expecting 'document'", id, get["type"])
@@ -149,13 +154,13 @@ func LoadDocumentByID(id string, client *redis.Client) (*Document, error) {
 
 	d.Slug = get["slug"]
 
-	d.Doctype, err = LoadDoctypeByID(get["doctype"], client)
+	d.Doctype, err = LoadDoctypeByID(get["doctype"])
 	if err != nil {
 		return d, err
 	}
 	d.DoctypeCode = d.Doctype.Code
 
-	d.Revision, err = LoadRevisionByID(get["revision"], client)
+	d.Revision, err = LoadRevisionByID(get["revision"])
 	if err != nil {
 		return d, err
 	}
@@ -163,8 +168,21 @@ func LoadDocumentByID(id string, client *redis.Client) (*Document, error) {
 	// load fields ids so we can load the fields
 	d.Fields = make(map[string]interface{})
 	for _, field := range d.Doctype.Fields {
-		d.LoadValue(field, client)
+		d.LoadValue(field)
 	}
 
 	return d, err
+}
+
+// Save a Documenter to the database
+func SaveStruct(s Documenter) string {
+	doc := Document{
+		Slug:        s.Slug(),
+		DoctypeCode: s.DoctypeCode(),
+		Fields:      FromStructToMap(s),
+	}
+
+	doc.Save()
+
+	return doc.ID
 }

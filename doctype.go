@@ -3,7 +3,7 @@ package datastore
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/redis.v2"
+	"gopkg.in/redis.v3"
 	"io"
 )
 
@@ -36,7 +36,10 @@ func (d *Doctype) Decode(r io.Reader) error {
 }
 
 // Save the doctype definition to the database.
-func (d *Doctype) Save(client *redis.Pipeline) {
+func (d *Doctype) Save() {
+	var err error
+	pipeline := Conn.Pipeline()
+
 	// Generates an ID if there's no one set
 	if len(d.ID) == 0 {
 		d.ID = GenerateID(4)
@@ -44,31 +47,31 @@ func (d *Doctype) Save(client *redis.Pipeline) {
 
 	// create, set and Save a new Revision.
 	d.Revision = CreateRevision(d.ID)
-	d.Revision.Save(client)
+	d.Revision.Save(pipeline)
 
 	// add this revision to a sorted set so we can retrieve all
 	// the revisions on a chronological order.
-	client.ZAdd(joinKey([]string{d.ID, "revisions"}), redis.Z{
+	pipeline.ZAdd(joinKey([]string{d.ID, "revisions"}), redis.Z{
 		Score:  float64(d.Revision.When.Unix()),
 		Member: d.Revision.ID,
 	})
 
 	// set the current revision the the field's base
 	// hash.
-	client.HSet(d.ID, "revision", d.Revision.ID)
+	pipeline.HSet(d.ID, "revision", d.Revision.ID)
 
 	// make doctype be foundable by code
 	// and to make codes unique
-	client.HSet("doctypes", d.Code, d.ID)
+	pipeline.HSet("doctypes", d.Code, d.ID)
 
-	client.HSet(d.ID, "type", "doctype")
+	pipeline.HSet(d.ID, "type", "doctype")
 
 	// Inside this loop there's everything that should be
 	// written to the history of changes (or Revision).
 	// That's why I loop over the Doctype.ID and Revision.ID
 	for _, baseID := range []string{d.ID, d.Revision.ID} {
-		client.HSet(baseID, "code", d.Code)
-		client.HSet(baseID, "verbose_name", d.VerboseName)
+		pipeline.HSet(baseID, "code", d.Code)
+		pipeline.HSet(baseID, "verbose_name", d.VerboseName)
 	}
 
 	// Loop over fields to save them the the database.
@@ -77,19 +80,26 @@ func (d *Doctype) Save(client *redis.Pipeline) {
 		field.Code = fieldCode
 		field.Revision = d.Revision
 
-		field.Save(d, client)
+		field.Save(d, pipeline)
 	}
+
+	_, err = pipeline.Exec()
+	if err != nil {
+		panic(err)
+	}
+
+	pipeline.Close()
 }
 
 // LoadDoctypeByID loads a doctype's definition from the database by ID
-func LoadDoctypeByID(id string, client *redis.Client) (*Doctype, error) {
+func LoadDoctypeByID(id string) (*Doctype, error) {
 	var err error
 
 	d := &Doctype{}
 	d.ID = id
 
 	// get all basic information from base hash
-	get := client.HGetAllMap(id).Val()
+	get := Conn.HGetAllMap(id).Val()
 
 	if get["type"] != "doctype" {
 		return d, fmt.Errorf("%s is type '%s', expecting 'doctype'", id, get["type"])
@@ -100,12 +110,12 @@ func LoadDoctypeByID(id string, client *redis.Client) (*Doctype, error) {
 	d.Fields = make(map[string]*Field)
 
 	// load fields ids so we can load the fields
-	fieldIds := client.SMembers(joinKey([]string{id, "fields"})).Val()
+	fieldIds := Conn.SMembers(joinKey([]string{id, "fields"})).Val()
 	for _, fieldID := range fieldIds {
-		LoadFieldByID(d, fieldID, client)
+		LoadFieldByID(d, fieldID)
 	}
 
-	d.Revision, err = LoadRevisionByID(get["revision"], client)
+	d.Revision, err = LoadRevisionByID(get["revision"])
 	if err != nil {
 		return d, err
 	}
@@ -114,10 +124,10 @@ func LoadDoctypeByID(id string, client *redis.Client) (*Doctype, error) {
 }
 
 // LoadDoctypeByCode loads a doctype's definition from the database by code
-func LoadDoctypeByCode(code string, client *redis.Client) (*Doctype, error) {
-	doctypeID := client.HGet("doctypes", code).Val()
+func LoadDoctypeByCode(code string) (*Doctype, error) {
+	doctypeID := Conn.HGet("doctypes", code).Val()
 	if len(doctypeID) == 0 {
 		return &Doctype{}, fmt.Errorf("Could not find Doctype by code '%s'", code)
 	}
-	return LoadDoctypeByID(doctypeID, client)
+	return LoadDoctypeByID(doctypeID)
 }
