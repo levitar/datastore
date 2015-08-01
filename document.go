@@ -175,7 +175,7 @@ func LoadDocumentByID(id string) (*Document, error) {
 }
 
 // Save a Documenter to the database
-func SaveStruct(s Documenter) string {
+func SaveDocument(s Documenter) string {
 	doc := Document{
 		Slug:        s.Slug(),
 		DoctypeCode: s.DoctypeCode(),

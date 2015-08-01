@@ -31,7 +31,7 @@ func TestRegisterDocumenter(t *testing.T) {
 				WithoutName: "Any fucking shit goes here",
 			}
 
-			Id := SaveStruct(u)
+			Id := SaveDocument(u)
 
 			documentLoaded, documentLoadedErr := LoadDocumentByID(Id)
 			if documentLoadedErr != nil {
