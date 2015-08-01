@@ -7,33 +7,44 @@ import (
 )
 
 type User struct {
+	ID          string `json"id"`
 	Username    string `json:"username" field:"username,unique"`
 	Name        string `json:"name" field:"name"`
 	WithoutName string `field:",unique"`
 }
 
-func (u User) Slug() string {
+func (u *User) Slug() string {
 	return fmt.Sprint(u.DoctypeCode(), "/", u.Username)
 }
 
-func (u User) DoctypeCode() string {
+func (u *User) DoctypeCode() string {
 	return "user"
+}
+
+func (u *User) GetID() string {
+	return u.ID
+}
+
+func (u *User) SetID(id string) {
+	u.ID = id
 }
 
 func TestRegisterDocumenter(t *testing.T) {
 	Convey("Registering Doctype", t, func() {
-		RegisterDoctype(User{})
+		user := &User{}
+		RegisterDoctype(user)
 
-		Convey("Save a Struct to the Database", func() {
-			u := User{
-				Username:    "alisson",
-				Name:        "Alisson Patricio",
-				WithoutName: "Any fucking shit goes here",
-			}
+		_, has_user_doctype := Doctypes[user.DoctypeCode()]
+		So(has_user_doctype, ShouldBeTrue)
 
-			Id := SaveDocument(u)
+		Convey("Save a document instance to the Database", func() {
+			user.Username = "alisson"
+			user.Name = "Alisson Patricio"
+			user.WithoutName = "Alisson Patricio"
 
-			documentLoaded, documentLoadedErr := LoadDocumentByID(Id)
+			SaveDocument(user)
+
+			documentLoaded, documentLoadedErr := LoadDocumentByID(user.GetID())
 			if documentLoadedErr != nil {
 				panic(documentLoadedErr)
 			}

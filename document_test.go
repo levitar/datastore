@@ -72,4 +72,13 @@ func TestDocument(t *testing.T) {
 			})
 		})
 	})
+
+	Convey("Document not found", t, func() {
+		So(func() {
+			_, err := LoadDocumentByID("RandomID1231")
+			if err != nil {
+				panic(err)
+			}
+		}, ShouldPanic)
+	})
 }

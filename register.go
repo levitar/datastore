@@ -6,7 +6,7 @@ import (
 )
 
 // global function so we can easily access a doctype without needing to retrieve it from the database
-var Doctypes map[string]*Doctype
+var Doctypes = make(map[string]*Doctype)
 
 // Register a Go Struct as a Doctype
 func RegisterDoctype(doctype Documenter) {
@@ -17,6 +17,11 @@ func RegisterDoctype(doctype Documenter) {
 		Code:        code, // could also use sstrings.ToLower(doctypeType.String()) as default value
 		VerboseName: doctypeType.Name(),
 		Fields:      make(map[string]*Field),
+	}
+
+	// is it a pointer? if so, get the struct
+	if doctypeType.Kind() == reflect.Ptr {
+		doctypeType = doctypeType.Elem()
 	}
 
 	for i := 0; i < doctypeType.NumField(); i++ {
@@ -44,8 +49,4 @@ func RegisterDoctype(doctype Documenter) {
 
 	// save new doctype to the database
 	newDoctype.Save()
-}
-
-func init() {
-	Doctypes = make(map[string]*Doctype)
 }

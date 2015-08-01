@@ -10,6 +10,8 @@ import (
 type Documenter interface {
 	Slug() string
 	DoctypeCode() string
+	SetID(string)
+	GetID() string
 }
 
 // Document definition
@@ -148,6 +150,10 @@ func LoadDocumentByID(id string) (*Document, error) {
 	// get all basic information from base hash
 	get := Conn.HGetAllMap(id).Val()
 
+	if len(get) == 0 {
+		return d, fmt.Errorf("Document NotFound for ID: %s", id)
+	}
+
 	if get["type"] != "document" {
 		return d, fmt.Errorf("%s is type '%s', expecting 'document'", id, get["type"])
 	}
@@ -175,14 +181,18 @@ func LoadDocumentByID(id string) (*Document, error) {
 }
 
 // Save a Documenter to the database
-func SaveDocument(s Documenter) string {
-	doc := Document{
-		Slug:        s.Slug(),
-		DoctypeCode: s.DoctypeCode(),
-		Fields:      FromStructToMap(s),
+func SaveDocument(stru_doc Documenter) string {
+	db_doc := Document{
+		Slug:        stru_doc.Slug(),
+		DoctypeCode: stru_doc.DoctypeCode(),
+		Fields:      FromStructToMap(stru_doc),
 	}
 
-	doc.Save()
+	// save documenter to the database
+	db_doc.Save()
 
-	return doc.ID
+	// set ID to the Documenter
+	stru_doc.SetID(db_doc.ID)
+
+	return db_doc.ID
 }
