@@ -10,8 +10,6 @@ import (
 type Documenter interface {
 	Slug() string
 	DoctypeCode() string
-	SetID(string)
-	GetID() string
 }
 
 // Document definition
@@ -181,8 +179,8 @@ func LoadDocumentByID(id string) (*Document, error) {
 }
 
 // Save a Documenter to the database
-func SaveDocument(stru_doc Documenter) string {
-	db_doc := Document{
+func SaveDocument(stru_doc Documenter) *Document {
+	db_doc := &Document{
 		Slug:        stru_doc.Slug(),
 		DoctypeCode: stru_doc.DoctypeCode(),
 		Fields:      FromStructToMap(stru_doc),
@@ -191,8 +189,5 @@ func SaveDocument(stru_doc Documenter) string {
 	// save documenter to the database
 	db_doc.Save()
 
-	// set ID to the Documenter
-	stru_doc.SetID(db_doc.ID)
-
-	return db_doc.ID
+	return db_doc
 }

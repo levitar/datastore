@@ -32,6 +32,11 @@ func RegisterDoctype(doctype Documenter) {
 		fieldName := fieldTags[0]
 		//fieldFlags := fieldTags[1:]
 
+		// if name is - then ignore it
+		if fieldName == "-" {
+			continue
+		}
+
 		// if there's no struct tag defining it's name use the struct's field name as default
 		if fieldName == "" {
 			fieldName = typeField.Name

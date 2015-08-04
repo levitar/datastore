@@ -1,13 +1,13 @@
 package datastore
 
 import (
+	"encoding/json"
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
 
 type User struct {
-	ID          string `json"id"`
 	Username    string `json:"username" field:"username,unique"`
 	Name        string `json:"name" field:"name"`
 	WithoutName string `field:",unique"`
@@ -19,14 +19,6 @@ func (u *User) Slug() string {
 
 func (u *User) DoctypeCode() string {
 	return "user"
-}
-
-func (u *User) GetID() string {
-	return u.ID
-}
-
-func (u *User) SetID(id string) {
-	u.ID = id
 }
 
 func TestRegisterDocumenter(t *testing.T) {
@@ -42,14 +34,26 @@ func TestRegisterDocumenter(t *testing.T) {
 			user.Name = "Alisson Patricio"
 			user.WithoutName = "Alisson Patricio"
 
-			SaveDocument(user)
+			documentCreated := SaveDocument(user)
 
-			documentLoaded, documentLoadedErr := LoadDocumentByID(user.GetID())
+			documentLoaded, documentLoadedErr := LoadDocumentByID(documentCreated.ID)
 			if documentLoadedErr != nil {
 				panic(documentLoadedErr)
 			}
 
-			fmt.Println(documentLoaded)
+			Convey("Compare document created with loaded", func() {
+				docCreatedJSON, docCreatedJSONErr := json.MarshalIndent(documentCreated, "", "\t")
+				if docCreatedJSONErr != nil {
+					panic(docCreatedJSONErr)
+				}
+
+				docLoadedJSON, docLoadedJSONErr := json.MarshalIndent(documentLoaded, "", "\t")
+				if docLoadedJSONErr != nil {
+					panic(docLoadedJSONErr)
+				}
+
+				So(docCreatedJSON, ShouldResemble, docLoadedJSON)
+			})
 		})
 	})
 }
