@@ -8,9 +8,9 @@ import (
 )
 
 type User struct {
-	Username    string `json:"username" field:"username,unique"`
-	Name        string `json:"name" field:"name"`
-	WithoutName string `field:",unique"`
+	Username    string `json:"username" field:"unique"`
+	Name        string `json:"name"`
+	WithoutName string
 }
 
 func (u *User) Slug() string {

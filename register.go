@@ -28,23 +28,22 @@ func RegisterDoctype(doctype Documenter) {
 		typeField := doctypeType.Field(i)
 		tags := typeField.Tag
 
-		fieldTags := strings.Split(tags.Get("field"), ",")
-		fieldName := fieldTags[0]
-		//fieldFlags := fieldTags[1:]
+		jsonTags := strings.Split(tags.Get("json"), ",")
+		jsonName := jsonTags[0]
 
 		// if name is - then ignore it
-		if fieldName == "-" {
+		if jsonName == "-" {
 			continue
 		}
 
 		// if there's no struct tag defining it's name use the struct's field name as default
-		if fieldName == "" {
-			fieldName = typeField.Name
+		if jsonName == "" {
+			jsonName = typeField.Name
 		}
 
 		// set field to the new doctype we're building
-		newDoctype.Fields[fieldName] = &Field{
-			Code:          fieldName,
+		newDoctype.Fields[jsonName] = &Field{
+			Code:          jsonName,
 			VerboseName:   typeField.Name,
 			ExpectedTypes: []string{typeField.Type.String()},
 		}
