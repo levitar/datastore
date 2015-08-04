@@ -32,7 +32,7 @@ func TestDocument(t *testing.T) {
 
 		doctypeCreated.Save()
 
-		Convey("Save a document", func() {
+		Convey("Create a document", func() {
 			createDocumentJSON := strings.NewReader(`{
 				"slug": "my-first-page",
 				"doctype": "page",

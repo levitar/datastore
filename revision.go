@@ -42,17 +42,30 @@ func (r *Revision) Save(client *redis.Pipeline) {
 	client.HSet(r.ID, "object", r.Object)
 	client.HSet(r.ID, "when", r.When.Format(time.RFC3339Nano))
 	client.HSet(r.ID, "change_type", r.Type)
+	client.HSet(r.ID, "parent", r.Parent)
 }
 
 // CreateRevision creates a revision meta to the object
 func CreateRevision(objectID string) *Revision {
-	revision := Revision{}
+	revision := &Revision{}
 	revision.ID = GenerateID(9)
 	revision.When = time.Now().UTC()
 	revision.Type = "create"
 	revision.Object = objectID
 
-	return &revision
+	return revision
+}
+
+// UpdateRevision creates a update revision
+func UpdateRevision(parent *Revision) *Revision {
+	revision := &Revision{}
+	revision.ID = GenerateID(9)
+	revision.When = time.Now().UTC()
+	revision.Type = "update"
+	revision.Object = parent.Object
+	revision.Parent = parent.Parent
+
+	return revision
 }
 
 // LoadRevisionByID loads a revision meta data from the database by ID.

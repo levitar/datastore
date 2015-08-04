@@ -34,14 +34,14 @@ func TestRegisterDocumenter(t *testing.T) {
 			user.Name = "Alisson Patricio"
 			user.WithoutName = "Alisson Patricio"
 
-			documentCreated := SaveDocument(user)
-
-			documentLoaded, documentLoadedErr := LoadDocumentByID(documentCreated.ID)
-			if documentLoadedErr != nil {
-				panic(documentLoadedErr)
-			}
+			documentCreated := CreateDocument(user)
 
 			Convey("Compare document created with loaded", func() {
+				documentLoaded, documentLoadedErr := LoadDocumentByID(documentCreated.ID)
+				if documentLoadedErr != nil {
+					panic(documentLoadedErr)
+				}
+
 				docCreatedJSON, docCreatedJSONErr := json.MarshalIndent(documentCreated, "", "\t")
 				if docCreatedJSONErr != nil {
 					panic(docCreatedJSONErr)
@@ -53,6 +53,31 @@ func TestRegisterDocumenter(t *testing.T) {
 				}
 
 				So(docCreatedJSON, ShouldResemble, docLoadedJSON)
+			})
+
+			Convey("Update document", func() {
+				user.Name = "Oicirtap Nossila"
+
+				documentUpdated := UpdateDocument(documentCreated.ID, user)
+
+				Convey("Compare document updated with loaded", func() {
+					documentLoaded, documentLoadedErr := LoadDocumentByID(documentCreated.ID)
+					if documentLoadedErr != nil {
+						panic(documentLoadedErr)
+					}
+
+					docUpdatedJSON, docUpdatedJSONErr := json.MarshalIndent(documentUpdated, "", "\t")
+					if docUpdatedJSONErr != nil {
+						panic(docUpdatedJSONErr)
+					}
+
+					docLoadedJSON, docLoadedJSONErr := json.MarshalIndent(documentLoaded, "", "\t")
+					if docLoadedJSONErr != nil {
+						panic(docLoadedJSONErr)
+					}
+
+					So(docUpdatedJSON, ShouldResemble, docLoadedJSON)
+				})
 			})
 		})
 	})

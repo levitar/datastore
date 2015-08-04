@@ -12,7 +12,7 @@ type Documenter interface {
 	DoctypeCode() string
 }
 
-// Document definition
+// Document
 //
 // Holds the document's data
 type Document struct {
@@ -39,7 +39,7 @@ func (d *Document) Decode(r io.Reader) error {
 	return json.NewDecoder(r).Decode(d)
 }
 
-// Save the doctype definition to the database.
+// Save this document on the database.
 func (d *Document) Save() {
 	var err error
 	pipeline := Conn.Pipeline()
@@ -58,7 +58,11 @@ func (d *Document) Save() {
 	}
 
 	// create, set and Save a new Revision.
-	d.Revision = CreateRevision(d.ID)
+	if d.Revision == nil {
+		d.Revision = CreateRevision(d.ID)
+	} else {
+		d.Revision = UpdateRevision(d.Revision)
+	}
 	d.Revision.Save(pipeline)
 
 	// add this revision to a sorted set so we can retrieve all
@@ -178,8 +182,8 @@ func LoadDocumentByID(id string) (*Document, error) {
 	return d, err
 }
 
-// Save a Documenter to the database
-func SaveDocument(stru_doc Documenter) *Document {
+// Create a Documenter on the database
+func CreateDocument(stru_doc Documenter) *Document {
 	db_doc := &Document{
 		Slug:        stru_doc.Slug(),
 		DoctypeCode: stru_doc.DoctypeCode(),
@@ -190,4 +194,22 @@ func SaveDocument(stru_doc Documenter) *Document {
 	db_doc.Save()
 
 	return db_doc
+}
+
+// Update a Documenter on the database
+func UpdateDocument(id string, stru_doc Documenter) *Document {
+	// load the document first
+	documentLoaded, documentLoadedErr := LoadDocumentByID(id)
+	if documentLoadedErr != nil {
+		panic(documentLoadedErr)
+	}
+
+	// update fields
+	documentLoaded.Slug = stru_doc.Slug()
+	documentLoaded.Fields = FromStructToMap(stru_doc)
+
+	// save documenter to the database
+	documentLoaded.Save()
+
+	return documentLoaded
 }
